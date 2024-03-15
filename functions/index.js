@@ -10,18 +10,24 @@ let eventdiff = [];
 // eslint-disable-next-line require-jsdoc
 function calculateTimeDifference(lineHeight, timestamp1, timestamp2) {
   // eslint-disable-next-line max-len
-  const difference = Math.abs(lineHeight*((timestamp1 - timestamp2)/timestamp1));
-  return difference;
+  const time1 = timestamp1;
+  const time2 = timestamp2;
+  const difference = Math.abs(((time1 - time2)/time2)) * 100000;
+  if (difference < 2) {
+    return 2;
+  } else {
+    return parseInt(difference);
+  }
 }
 
 // eslint-disable-next-line require-jsdoc
 function calculateAndAppendTimeDifference(objects, index = 0) {
-  if (index === 0) {
+  if (index == 0) {
     objects[index].line_height = 2; // First object has no previous timestamp
   } else {
     const previousLineheight=objects[index - 1].line_height;
-    const previousTime = objects[index - 1].timestamp;
-    const currentTime = objects[index].timestamp;
+    const previousTime = objects[index - 1].created_at;
+    const currentTime = objects[index].created_at;
     // eslint-disable-next-line max-len
     const timeDifference = calculateTimeDifference(previousLineheight, currentTime, previousTime);
     objects[index].line_height = timeDifference;
@@ -38,13 +44,13 @@ exports.diffCalcFB = functions.https.onRequest((req, res) => {
   const user = req.body.userId;
 
   // eslint-disable-next-line max-len
-  db.collection("event_records").where("user", "==", user).orderBy("timestamp", "asc").get()
+  db.collection("event_records").where("user", "==", user).orderBy("created_at", "asc").get()
       .then((snapshot) => {
         snapshot.forEach((doc) => {
           const event = {
             "id": doc.id,
             "title": doc.data().title,
-            "timestamp": doc.data().timestamp,
+            "created_at": doc.data().created_at,
             "line_height": doc.data().line_height,
           };
           allEvents.push(event); // Use push instead of concat
@@ -61,7 +67,7 @@ exports.diffCalcFB = functions.https.onRequest((req, res) => {
       })
       .then(() => {
         // eslint-disable-next-line max-len
-        res.send(eventdiff); // Send the response after all operations are completed
+        res.status(200).send("Success"); // Send the response after all operations are completed
         console.log("Batch update successful!");
       })
       .catch((error) => {
